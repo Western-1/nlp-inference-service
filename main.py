@@ -1,58 +1,50 @@
 import os
+import redis
+import json
 from datetime import datetime
 from fastapi import FastAPI
 from pydantic import BaseModel
 from transformers import pipeline
 
-# Setup logging directory
-if not os.path.exists("logs"):
-    os.makedirs("logs")
+app = FastAPI(title="NLP Microservice with Redis")
 
-app = FastAPI(title="NLP Inference Service")
+r = redis.Redis(host='redis-db', port=6379, decode_responses=True)
 
-print("Loading models, please wait...")
-
-sentiment_pipeline = pipeline(
-    "sentiment-analysis", 
-    model="distilbert/distilbert-base-uncased-finetuned-sst-2-english"
-)
-
-translation_pipeline = pipeline(
-    "translation_en_to_fr", 
-    model="Helsinki-NLP/opus-mt-en-fr"
-)
-
-print("Models loaded successfully.")
-
+print("Loading models...")
+sentiment_pipeline = pipeline("sentiment-analysis", model="distilbert/distilbert-base-uncased-finetuned-sst-2-english")
+translator = pipeline("translation_en_to_fr", model="Helsinki-NLP/opus-mt-en-fr")
 
 class APIInput(BaseModel):
     text: str
 
-
-def save_log(task_name: str, input_text: str, output_result: str):
+def save_log(task, text, result):
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    log_entry = f"[{timestamp}] TASK: {task_name} | INPUT: {input_text} | OUTPUT: {output_result}\n"
-    
-    with open("logs/service_history.log", "a", encoding="utf-8") as f:
-        f.write(log_entry)
-
+    log_data = {
+        "timestamp": timestamp,
+        "task": task,
+        "input": text,
+        "result": str(result)
+    }
+    r.lpush("api_logs", json.dumps(log_data))
 
 @app.get("/")
-def health_check():
-    return {"status": "healthy", "available_services": ["/sentiment", "/translate"]}
+def home():
+    return {"status": "Online", "db_status": "Connected to Redis"}
 
+@app.get("/history")
+def get_history():
+    logs = r.lrange("api_logs", 0, 9)
+    return [json.loads(log) for log in logs]
 
 @app.post("/sentiment")
 def predict_sentiment(data: APIInput):
     result = sentiment_pipeline(data.text)
-    save_log("SENTIMENT", data.text, str(result))
+    save_log("SENTIMENT", data.text, result)
     return {"result": result}
-
 
 @app.post("/translate")
 def translate_text(data: APIInput):
-    result = translation_pipeline(data.text)
+    result = translator(data.text)
     translated_text = result[0]['translation_text']
-    
     save_log("TRANSLATION", data.text, translated_text)
     return {"translated_text": translated_text}

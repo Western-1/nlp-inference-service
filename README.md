@@ -1,100 +1,131 @@
-# NLP Inference Microservice
+# NLP Inference Microservice (Docker Compose & Redis)
 
-![Python Version](https://img.shields.io/badge/python-3.9-blue.svg)
+![Python](https://img.shields.io/badge/python-3.9-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
-![Docker](https://img.shields.io/badge/docker-supported-blue.svg)
+![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=flat&logo=docker&logoColor=white)
+![Redis](https://img.shields.io/badge/redis-%23DD0031.svg?style=flat&logo=redis&logoColor=white)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.109.0-009688.svg)
 ![HuggingFace](https://img.shields.io/badge/Models-HuggingFace-yellow.svg)
 
-A production-ready REST API for multi-task Natural Language Processing. This service acts as a unified gateway for multiple Transformer models, providing **Sentiment Analysis** and **English-to-French Translation**. It features an automated logging system for request auditing.
+A production-ready **Microservices Architecture** for Natural Language Processing.  
+This project orchestrates multiple containers using **Docker Compose**: a FastAPI application for inference and a **Redis** database for high-speed logging and persistence.
 
 ![Dashboard Overview](Images/1.png)
 
-## Overview
+---
 
-Instead of deploying separate containers for each model, this microservice loads them into a single efficient memory space. It is designed for ease of deployment, monitoring, and scalability.
+## Architecture & Workflow
 
-**Key Features:**
-- **Multi-Model Architecture:** Runs `DistilBERT` (Sentiment) and `Helsinki-NLP` (Translation) simultaneously.
-- **Request Logging:** Automatically saves all inputs, outputs, and timestamps to local logs.
-- **High Performance:** Models are pre-loaded at startup to ensure low-latency inference.
-- **Validation:** Strict data validation using Pydantic schemas.
+This project demonstrates a modern microservices approach. Instead of a monolithic script, the system decouples inference from data persistence.
+
+```mermaid
+graph LR
+    User([Client Request]) -->|POST /sentiment| API[FastAPI Container]
+    API -->|Inference| Model[HuggingFace Model]
+    API -->|Log Result| Redis[(Redis Container)]
+    User -->|GET /history| API
+    API <-->|Fetch Logs| Redis
+
+    style API fill:#009688,stroke:#333,stroke-width:2px,color:white
+    style Redis fill:#DD0031,stroke:#333,stroke-width:2px,color:white
+```
+
+### Key Features
+
+- **Microservices Orchestration:** Fully dockerized environment via `docker-compose`
+- **Multi-Model Inference:** `DistilBERT` (Sentiment) & `Helsinki-NLP` (Translation)
+- **Persistent Storage:** Asynchronous logging to Redis
+- **Request History:** Dedicated endpoint for audit and debugging
+- **Strict Validation:** Pydantic schemas enforce type safety
+
+---
 
 ## Tech Stack
 
+- **Orchestration:** Docker Compose
 - **Core:** Python 3.9, FastAPI, Uvicorn
+- **Database:** Redis (Alpine)
 - **ML Backend:** PyTorch, Transformers, SentencePiece
 - **Models:**
-    - `distilbert-base-uncased-finetuned-sst-2-english`
-    - `Helsinki-NLP/opus-mt-en-fr`
-- **DevOps:** Docker
+  - `distilbert-base-uncased-finetuned-sst-2-english`
+  - `Helsinki-NLP/opus-mt-en-fr`
+
+---
 
 ## Project Structure
 
-```text
+```
 .
-├── Dockerfile           # Container configuration
-├── main.py              # App entry point & Logic
-├── requirements.txt     # Dependencies
-├── logs/                # Auto-generated log storage
-│   └── service_history.log
+├── docker-compose.yml   # Service orchestration (App + Redis)
+├── Dockerfile           # App container configuration
+├── main.py              # Application logic & endpoints
+├── requirements.txt     # Python dependencies
 └── Images/              # Documentation assets
 ```
 
+---
+
 ## Installation and Setup
 
-### Local Development
+### Prerequisites
+- Docker Engine
+- Docker Compose
 
-1. **Clone the repository:**
-   ```bash
-   git clone <repository-url>
-   cd nlp-inference-service
-   ```
+### Quick Start
 
-2. **Install dependencies:**
-   ```bash
-   pip install -r requirements.txt
-   ```
-   *Note: `sentencepiece` is required for the translation tokenizer.*
+1. **Clone the repository**
+```bash
+git clone https://github.com/Western-1/nlp-inference-service
+cd nlp-inference-service
+```
 
-3. **Run the server:**
-   ```bash
-   python -m uvicorn main:app --reload --host 0.0.0.0 --port 8000
-   ```
-   *First launch will take a moment to download the models from Hugging Face.*
+2. **Start the services**
+```bash
+docker-compose up --build
+```
 
-### Docker Deployment
+> [!NOTE]
+> The first launch may take several minutes while ML models are downloaded from Hugging Face.
 
-1. **Build the image:**
-   ```bash
-   docker build -t nlp-service .
-   ```
+3. **Stop the system**
+```bash
+docker-compose down
+```
 
-2. **Run the container:**
-   ```bash
-   docker run -d -p 8000:8000 --name nlp-app nlp-service
-   ```
+---
 
 ## API Documentation
 
-The API comes with auto-generated interactive documentation available at `/docs`.
+Interactive Swagger UI is available at: `http://localhost:8000/docs`
 
 ### 1. Health Check
-**GET** `/`
-Returns the status of the service and lists available endpoints.
+`GET /` - Checks service status and Redis connection.
 
-### 2. Sentiment Analysis
-**POST** `/sentiment`
-Determines if a text is POSITIVE or NEGATIVE.
+### 2. Request History
+`GET /history` - Returns the last 10 requests stored in Redis.
 
-**Request:**
+```json
+[
+  {
+    "timestamp": "2025-12-24 18:30:00",
+    "task": "TRANSLATION",
+    "input": "Hello",
+    "result": "Bonjour"
+  }
+]
+```
+
+### 3. Sentiment Analysis
+`POST /sentiment` -  Classifies text as **POSITIVE** or **NEGATIVE**.
+
+**Request**
 ```json
 {
   "text": "The deployment process was incredibly smooth."
 }
 ```
 
-**Response:**
+**Response**
 ```json
 {
   "result": [
@@ -106,18 +137,18 @@ Determines if a text is POSITIVE or NEGATIVE.
 }
 ```
 
-### 3. Translation (En → Fr)
-**POST** `/translate`
-Translates English text into French using the Opus-MT model.
+### 4. Translation (En → Fr)
+`POST /translate`  
+Translates English text to French.
 
-**Example Request:**
+**Request**
 ```json
 {
   "text": "Hello world, this is a test."
 }
 ```
 
-**Example Response:**
+**Response**
 ```json
 {
   "translated_text": "Bonjour le monde, c'est un test."
@@ -126,20 +157,20 @@ Translates English text into French using the Opus-MT model.
 
 ![Translation Example](Images/2.png)
 
-## Logging System
+---
 
-The service includes a built-in logger that tracks usage statistics in real-time. Every request is timestamped and saved to `logs/service_history.log`.
+## Logging Architecture
 
-**Log Format:**
-`[YYYY-MM-DD HH:MM:SS] TASK: <TYPE> | INPUT: <TEXT> | OUTPUT: <RESULT>`
+Instead of synchronous file logging, the service uses **Redis Lists** as a high‑performance buffer.
 
-**Example Log Output:**
-```text
-[2025-12-24 09:33:57] TASK: SENTIMENT | INPUT: Great job! | OUTPUT: [{'label': 'POSITIVE', 'score': 0.99}]
-[2025-12-24 09:34:05] TASK: TRANSLATION | INPUT: Hello | OUTPUT: Bonjour
-```
+1. __API__ receives a request  
+2. Model generates a prediction  
+3. Result is serialized to __JSON__ and pushed to `service_history`  
+4. `/history` endpoint retrieves recent entries via `LRANGE`
 
 ![Logs Preview](Images/3.png)
+
+---
 
 ## License
 
@@ -147,12 +178,6 @@ The service includes a built-in logger that tracks usage statistics in real-time
 
 Copyright (c) 2025 Andriy Vlonha
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
