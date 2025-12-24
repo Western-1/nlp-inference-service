@@ -1,6 +1,8 @@
-fastapi
-uvicorn
-transformers
-torch
-sentencepiece
-redis
+fastapi==0.109.0
+uvicorn==0.27.0
+redis==5.0.1
+transformers==4.37.2
+torch==2.2.0 --index-url https://download.pytorch.org/whl/cpu
+sentencepiece==0.1.99
+pydantic==2.6.0
+gunicorn==21.2.0

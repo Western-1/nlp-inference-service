@@ -1,16 +1,25 @@
 version: '3.8'
-
 services:
-  nlp-app:
+  nlp-service:
     build: .
+    container_name: nlp-app
     ports:
       - "8000:8000"
     depends_on:
       - redis-db
     environment:
-      - PYTHONUNBUFFERED=1
-
+      - REDIS_HOST=redis-db
+      - REDIS_PORT=6379
+    volumes:
+      - huggingface_cache:/root/.cache/huggingface
   redis-db:
     image: redis:alpine
+    container_name: redis-db
     ports:
       - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  redis_data:
+  huggingface_cache:
