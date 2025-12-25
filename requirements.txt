@@ -9,3 +9,5 @@ pydantic==2.6.0
 gunicorn==21.2.0
 pytest==8.0.0
 httpx==0.26.0
+prometheus-fastapi-instrumentator==6.1.0
+numpy<2

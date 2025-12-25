@@ -27,6 +27,7 @@ services:
       - /etc/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       - nlp-app
+      - prometheus
 
   redis-db:
     image: redis:alpine
@@ -36,6 +37,19 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: always
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+    expose:
+      - "9090"
+    depends_on:
+      - nlp-app
 
 volumes:
   redis_data:
