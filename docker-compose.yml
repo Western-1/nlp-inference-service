@@ -28,6 +28,7 @@ services:
     depends_on:
       - nlp-app
       - prometheus
+      - grafana
 
   redis-db:
     image: redis:alpine
@@ -51,6 +52,18 @@ services:
     depends_on:
       - nlp-app
 
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: always
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+
 volumes:
   redis_data:
   huggingface_cache:
+  grafana_data:
