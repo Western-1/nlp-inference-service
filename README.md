@@ -8,6 +8,8 @@
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.109.0-009688.svg)
 ![Nginx](https://img.shields.io/badge/nginx-%23009639.svg?style=flat&logo=nginx&logoColor=white)
 ![SSL](https://img.shields.io/badge/SSL-Secure-green.svg?style=flat&logo=letsencrypt)
+![Prometheus](https://img.shields.io/badge/Prometheus-E6522C?style=flat&logo=Prometheus&logoColor=white)
+![Grafana](https://img.shields.io/badge/Grafana-F46800?style=flat&logo=Grafana&logoColor=white)
 
 A production-ready **Microservices Architecture** for Natural Language Processing. This project orchestrates multiple containers using **Docker Compose**: a FastAPI application for inference and a **Redis** database for high-speed logging and persistence.
 
@@ -29,6 +31,7 @@ graph LR
   classDef ext fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px,color:#000
   classDef proxy fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,color:#000
   classDef planned fill:#fafafa,stroke:#9e9e9e,stroke-width:2px,stroke-dasharray: 5 5,color:#616161
+  classDef monitor fill:#fff3e0,stroke:#ef6c00,stroke-width:2px,color:#000
 
   %% --- Actors ---
   User([User / Client])
@@ -55,6 +58,12 @@ graph LR
 
     %% Storage Service
     Redis[(Redis DB)]:::db
+    
+    %% Monitoring Stack
+    subgraph Observability [Monitoring Stack]
+        Prometheus[Prometheus]:::monitor
+        Grafana[Grafana Dashboards]:::monitor
+    end
   end
 
   %% --- External / Cloud ---
@@ -62,7 +71,6 @@ graph LR
     HF_Hub[HuggingFace Hub]:::ext
     HFCache[Volume: HF Cache]:::ext
     S3[(S3 Archive)]:::planned
-    Prometheus[Metrics]:::planned
   end
 
   %% === Data Flow ===
@@ -81,9 +89,12 @@ graph LR
   User -->|"GET /history"| Uvicorn
   Uvicorn <-->|"LRANGE"| Redis
 
+  %% Monitoring Flow
+  Prometheus -->|"Scrape /metrics"| Uvicorn
+  Grafana -->|"Query Data"| Prometheus
+
   %% Future roadmap
   Redis -.->|"Future Archive"| S3
-  Uvicorn -.->|"Future Monitoring"| Prometheus
 
   style DockerNet fill:none,stroke:#607d8b,stroke-width:2px,stroke-dasharray: 5 5
   style Ingress fill:none,stroke:none
@@ -228,7 +239,7 @@ Try the API live here (Reverse Proxy via Nginx):
 
 ## Monitoring & Metrics
 
-The service comes with built-in **Prometheus** instrumentation. It automatically collects metrics like request latency, memory usage, and request counts.
+The project includes a comprehensive monitoring stack based on **Prometheus** and **Grafana**. It provides real-time insights into application performance, resource usage, and traffic patterns.
 
 ### Live Access
 You can view the raw metrics exposed by the application here:
@@ -241,6 +252,13 @@ If you run the container locally, you can check metrics via curl:
 ```bash
 curl http://localhost:8000/metrics
 ```
+### Grafana Dashboard
+Visualizes key metrics such as Requests Per Second (RPS), Latency (P99), Memory Usage, and HTTP Status Codes.
+
+![Prometheus console](Images/prometheus_console.png)
+
+![Grafana Dashboard](Images/grafana_dashboard.png)
+
 
 ## License
 
