@@ -1,0 +1,27 @@
+name: CD Pipeline
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to AWS EC2 via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
+          script: |
+            cd nlp-inference-service
+            
+            git reset --hard origin/main
+            
+            git pull origin main
+            
+            # --build гарантує, що якщо змінився код Python, Docker перезбере образ
+            docker compose up -d --build
+            
+            docker system prune -f
