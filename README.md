@@ -209,8 +209,8 @@ docker compose up -d --build
 
 ## Live Demo
 
-Check out the deployed API (Swagger UI):  
-**[http://13.61.33.199:8000/docs](http://13.61.33.199:8000/docs)** 
+Try the API live here (Reverse Proxy via Nginx):  
+**[http://western-nlp.ddns.net/docs](http://western-nlp.ddns.net/docs)**
 
 > [!IMPORTANT]
 > Active (Hosted on AWS EC2 Free Tier)
