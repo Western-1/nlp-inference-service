@@ -172,6 +172,26 @@ pip install pytest httpx
 pytest tests/ -v
 ```
 
+## Code Quality & Security
+The project follows strict development standards to ensure code quality and security. Every commit triggers a GitHub Actions pipeline that runs:
+
+- Linting (`flake8`): Enforces PEP8 style guide and catches syntax errors.
+
+- Security Scanning (`bandit`): Scans the code for common vulnerabilities (e.g., hardcoded secrets, unsafe functions).
+
+## Run checks locally
+You can run the same checks on your machine before pushing code:
+```bash
+# 1. Install quality tools
+pip install flake8 bandit
+
+# 2. Check code style (Linting)
+flake8 . --count --show-source --statistics
+
+# 3. Scan for security vulnerabilities
+bandit -r .
+```
+
 ## Deployment (AWS EC2)
 
 The project uses a **Continuous Deployment (CD)** pipeline. Any change pushed to the `main` branch is automatically deployed to the AWS EC2 instance using GitHub Actions.
