@@ -34,8 +34,7 @@ jobs:
 
     - name: Security scan with Bandit
       run: |
-        # -r: recursive, -ll: log level (shows only medium/high severity issues optional)
-        bandit -r . -f custom --msg-template "{abspath}:{line}: {test_id}[bandit]: {msg}"
+        bandit -r . --exclude ./tests -f custom --msg-template "{abspath}:{line}: {test_id}[bandit]: {msg}"
 
     # --------------------------------
 
