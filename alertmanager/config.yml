@@ -7,7 +7,7 @@ route:
 receivers:
   - name: 'telegram-bot'
     telegram_configs:
-      - bot_token: '8318279790:AAEh6FVvD4QyZkTwvtoAgfRyxSfxTFI47EY'
-        chat_id: 913466065 ## u can use ur tg id and token.
-        message: '{{ range .Alerts }}🚨 <b>{{ .Annotations.summary }}</b>{{ end }}'
+      - bot_token: 'TOKEN_PLACEHOLDER'
+        chat_id: CHAT_ID_PLACEHOLDER
+        message: '{{ range .Alerts }} <b>{{ .Annotations.summary }}</b>{{ end }}'
         parse_mode: 'HTML'

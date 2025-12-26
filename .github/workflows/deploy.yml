@@ -16,19 +16,16 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
           script: |
-            # Navigate to project directory
             cd nlp-inference-service
             
-            # Reset local changes and pull latest code
             git reset --hard origin/main
             git pull origin main
             
-            # Create .env file with W&B API Key from GitHub Secrets
             echo "WANDB_API_KEY=${{ secrets.WANDB_API_KEY }}" > .env
             
-            # Rebuild and restart containers
-            # --build ensures Python changes are applied
+            sed -i "s|TOKEN_PLACEHOLDER|${{ secrets.TELEGRAM_TOKEN }}|g" alertmanager/config.yml
+            sed -i "s|CHAT_ID_PLACEHOLDER|${{ secrets.TELEGRAM_CHAT_ID }}|g" alertmanager/config.yml
+            
             docker compose up -d --build
             
-            # Cleanup unused Docker images to save space
             docker system prune -f
