@@ -34,6 +34,7 @@ graph LR
   classDef proxy fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px,color:#000
   classDef planned fill:#fafafa,stroke:#9e9e9e,stroke-width:2px,stroke-dasharray: 5 5,color:#616161
   classDef monitor fill:#fff3e0,stroke:#ef6c00,stroke-width:2px,color:#000
+  classDef alert fill:#ffab91,stroke:#d84315,stroke-width:2px,color:#000
 
   %% --- Actors ---
   User([User / Client])
@@ -65,6 +66,7 @@ graph LR
     subgraph Observability [Monitoring Stack]
         Prometheus[Prometheus]:::monitor
         Grafana[Grafana Dashboards]:::monitor
+        Alertmanager[Alertmanager]:::alert
     end
   end
 
@@ -73,6 +75,7 @@ graph LR
     HF_Hub[HuggingFace Hub]:::ext
     HFCache[Volume: HF Cache]:::ext
     S3[(S3 Archive)]:::planned
+    Telegram([Telegram Bot]):::ext
   end
 
   %% === Data Flow ===
@@ -94,6 +97,11 @@ graph LR
   %% Monitoring Flow
   Prometheus -->|"Scrape /metrics"| Uvicorn
   Grafana -->|"Query Data"| Prometheus
+
+  %% Alerting Flow
+  Prometheus -.->|"Fire Alert (Down > 1m)"| Alertmanager
+  Alertmanager -.->|"Send Notification"| Telegram
+  Telegram -.->|"Critical Alert"| User
 
   %% Future roadmap
   Redis -.->|"Future Archive"| S3
@@ -207,14 +215,17 @@ Provision the infrastructure and setup Docker:
    cd nlp-inference-service
    docker compose up -d --build
 
-## 2. Configure GitHub Secrets
+### 2. Configure GitHub Secrets
 For the CD pipeline to work, add these secrets in repo settings (`Settings` -> `Secrets and variables` -> `Actions`):
 
-| Secret Name | Value |
-|-------------|-------|
-| `EC2_HOST` | Public IP or DNS of your EC2 instance |
-| `EC2_USER` | SSH Username (e.g., `ubuntu`) |
-| `EC2_SSH_KEY` | Private SSH Key (`.pem` content) |
+| Secret Name | Value | Description |
+|-------------|-------|-------------|
+| `EC2_HOST` | Public IP / DNS | Address of your AWS instance |
+| `EC2_USER` | `ubuntu` | SSH Username |
+| `EC2_SSH_KEY` | `-----BEGIN RSA...` | Private SSH Key content |
+| `WANDB_API_KEY`| `ef2f...` | API Key for Weights & Biases |
+| `TELEGRAM_TOKEN`| `12345:ABC...` | Bot Token from @BotFather |
+| `TELEGRAM_CHAT_ID`| `12345678` | Your User ID for notifications |
 
 ## 3. Automatic Updates
 No manual action is required for updates.
@@ -281,6 +292,15 @@ Try the API live here (Reverse Proxy via Nginx):
 ## Monitoring & Metrics
 
 The project includes a comprehensive monitoring stack based on **Prometheus** and **Grafana**. It provides real-time insights into application performance, resource usage, and traffic patterns.
+
+### Alerting Architecture
+The system monitors the health of the application continuously.
+
+1. **Prometheus** checks `up{job="nlp-app"}` every 5 seconds.
+2. If the service is unreachable for **more than 1 minute**, an alert is fired.
+3. **Alertmanager** receives the alert and pushes a notification to the configured **Telegram Chat**.
+
+*(This ensures you sleep well, knowing the server will wake you up if it crashes!)*
 
 ### Live Access
 You can view the raw metrics exposed by the application here:
