@@ -7,6 +7,7 @@ from typing import Any
 import redis
 import wandb
 from fastapi import FastAPI, HTTPException
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 from transformers import pipeline
 from prometheus_fastapi_instrumentator import Instrumentator
@@ -29,10 +30,6 @@ def get_redis() -> redis.Redis:
     return redis.Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
 
 async def get_model(task_name: str, model_name: str):
-    """
-    Loads the model only when needed for the first time (Lazy Loading).
-    Kept async-friendly by running pipeline in executor.
-    """
     if task_name not in _models:
         print(f"Loading model for {task_name}...")
         loop = asyncio.get_running_loop()
@@ -47,7 +44,6 @@ class APIInput(BaseModel):
     text: str = Field(..., min_length=1, max_length=1000, title="Input text", description="Text to analyze/translate")
 
 def save_log(task: str, text: str, result: Any):
-    """Save a log to Redis using factory get_redis."""
     try:
         r = get_redis()
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -64,7 +60,6 @@ def save_log(task: str, text: str, result: Any):
 
 @app.on_event("startup")
 async def startup_event():
-    """Initialize heavier external integrations (W&B) on startup — not at import time."""
     global _wandb_inited
     if WANDB_KEY:
         try:
@@ -83,9 +78,15 @@ async def startup_event():
         except Exception as e:
             print(f"W&B Connection failed: {e}")
 
-@app.get("/")
-def home():
-    """Health check — also returns Redis connectivity status by ping."""
+
+@app.get("/", include_in_schema=False)
+def root():
+    """Redirect users to the documentation."""
+    return RedirectResponse(url="/docs")
+
+@app.get("/health")
+def health_check():
+    """Health check — returns 200 OK for Docker and Redis status."""
     try:
         r = get_redis()
         db_ok = False
@@ -97,6 +98,8 @@ def home():
         return {"status": "Online & Monitored with W&B", "db_status": db_status}
     except Exception as e:
         return {"status": "Online", "db_status": f"Error: {e}"}
+
+# --- ЗМІНИ ЗАКІНЧУЮТЬСЯ ТУТ ---
 
 @app.get("/history")
 def get_history():
