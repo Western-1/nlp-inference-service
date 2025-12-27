@@ -376,6 +376,31 @@ Visualizes key metrics such as Requests Per Second (RPS), Latency (P99), Memory 
 
 ![Grafana Dashboard](Images/grafana_dashboard.png)
 
+## Load Testing & Capacity Planning
+
+To determine the production limits of the current infrastructure (`AWS t3.micro`), we performed stress testing using **Locust**.
+
+### Test Configuration
+- **Tool:** Locust
+- **Users:** 20 Concurrent Users
+- **Spawn Rate:** 2 users/sec
+- **Target:** `/sentiment` endpoint (DistilBERT model)
+
+![Locust Setup](Images/locust_setup.png)
+
+### Results Analysis
+The test revealed the hardware limits of the single-core instance.
+
+- **Stable Load:** Up to **5 RPS** (Requests Per Second) with acceptable latency.
+- **Failure Point:** At ~15 concurrent users, the CPU saturates (100%), leading to **504 Gateway Timeouts**.
+- **Max Latency:** Spiked to 60s (Nginx timeout limit) under stress.
+
+![Load Charts](Images/locust_charts.png)
+
+*The graph clearly shows the "Cliff of Death" where response time (Purple) skyrockets and RPS (Green) collapses due to CPU throttling.*
+
+![Load Statistics](Images/locust_stats.png)
+
 ## MLOps: Experiment Tracking
 
 The project is fully integrated with **Weights & Biases (W&B)** to track model performance in production. Unlike standard system monitoring (Prometheus), W&B focuses on the **quality of the ML model**.
