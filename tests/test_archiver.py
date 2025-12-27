@@ -1,4 +1,5 @@
 import json
+import os
 from unittest.mock import MagicMock, patch
 from archiver.main import archive_logs
 

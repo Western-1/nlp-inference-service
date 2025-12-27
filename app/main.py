@@ -6,7 +6,8 @@ from typing import Any
 
 import redis
 import wandb
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Security, status
+from fastapi.security import APIKeyHeader
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, Field
 from transformers import pipeline
@@ -15,8 +16,20 @@ from prometheus_fastapi_instrumentator import Instrumentator
 REDIS_HOST = os.getenv("REDIS_HOST", "redis-db")
 REDIS_PORT = int(os.getenv("REDIS_PORT", 6379))
 HISTORY_LIMIT = int(os.getenv("HISTORY_LIMIT", 1000))
-
 WANDB_KEY = os.getenv("WANDB_API_KEY")
+
+API_KEY_NAME = "X-API-Key"
+api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
+SERVER_API_KEY = os.getenv("SERVER_API_KEY", "dev-secret-key")
+
+async def get_api_key(api_key_header: str = Security(api_key_header)):
+    """Validates the API Key from the request header."""
+    if api_key_header == SERVER_API_KEY:
+        return api_key_header
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Could not validate credentials"
+    )
 
 app = FastAPI(title="NLP Microservice with Redis")
 
@@ -30,6 +43,10 @@ def get_redis() -> redis.Redis:
     return redis.Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
 
 async def get_model(task_name: str, model_name: str):
+    """
+    Loads the model only when needed for the first time (Lazy Loading).
+    Kept async-friendly by running pipeline in executor.
+    """
     if task_name not in _models:
         print(f"Loading model for {task_name}...")
         loop = asyncio.get_running_loop()
@@ -44,6 +61,7 @@ class APIInput(BaseModel):
     text: str = Field(..., min_length=1, max_length=1000, title="Input text", description="Text to analyze/translate")
 
 def save_log(task: str, text: str, result: Any):
+    """Save a log to Redis using factory get_redis."""
     try:
         r = get_redis()
         timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -60,6 +78,7 @@ def save_log(task: str, text: str, result: Any):
 
 @app.on_event("startup")
 async def startup_event():
+    """Initialize heavier external integrations (W&B) on startup."""
     global _wandb_inited
     if WANDB_KEY:
         try:
@@ -86,7 +105,7 @@ def root():
 
 @app.get("/health")
 def health_check():
-    """Health check — returns 200 OK for Docker and Redis status."""
+    """Health check — returns 200 OK for Docker and Redis status. No Auth required."""
     try:
         r = get_redis()
         db_ok = False
@@ -99,9 +118,8 @@ def health_check():
     except Exception as e:
         return {"status": "Online", "db_status": f"Error: {e}"}
 
-# --- ЗМІНИ ЗАКІНЧУЮТЬСЯ ТУТ ---
 
-@app.get("/history")
+@app.get("/history", dependencies=[Security(get_api_key)])
 def get_history():
     try:
         r = get_redis()
@@ -110,7 +128,7 @@ def get_history():
     except Exception as e:
         return {"error": str(e)}
 
-@app.post("/sentiment")
+@app.post("/sentiment", dependencies=[Security(get_api_key)])
 async def predict_sentiment(data: APIInput):
     model = await get_model("sentiment-analysis", "distilbert-base-uncased-finetuned-sst-2-english")
     result = model(data.text)
@@ -133,7 +151,7 @@ async def predict_sentiment(data: APIInput):
 
     return {"result": result}
 
-@app.post("/translate")
+@app.post("/translate", dependencies=[Security(get_api_key)])
 async def translate_text(data: APIInput):
     model = await get_model("translation_en_to_fr", "Helsinki-NLP/opus-mt-en-fr")
     result = model(data.text)

@@ -11,6 +11,7 @@ services:
       - REDIS_HOST=redis-db
       - REDIS_PORT=6379
       - WANDB_API_KEY=${WANDB_API_KEY}
+      - SERVER_API_KEY=${SERVER_API_KEY}
     depends_on:
       redis-db:
         condition: service_healthy
