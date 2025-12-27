@@ -26,7 +26,7 @@ jobs:
             echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> .env
             echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> .env
             echo "S3_BUCKET_NAME=${{ secrets.S3_BUCKET_NAME }}" >> .env
-            echo "SERVER_API_KEY=${{ secrets.SERVER_API_KEY }}" >> .env
+            echo "SERVER_API_KEY=${{ secrets.DEMO_KEY }}" >> .env
             
             # Configuring notification tokens
             sed -i "s|TOKEN_PLACEHOLDER|${{ secrets.TELEGRAM_TOKEN }}|g" alertmanager/config.yml

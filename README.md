@@ -195,6 +195,7 @@ Create a `.env` file in the root directory with your credentials (optional for l
 AWS_ACCESS_KEY_ID=your_key
 AWS_SECRET_ACCESS_KEY=your_secret
 S3_BUCKET_NAME=your_backet_name
+SERVER_API_KEY=demo
 ...
 ```
 and etc..
@@ -259,6 +260,7 @@ For the CD pipeline to work, add these secrets in repo settings (`Settings` -> `
 | `AWS_ACCESS_KEY_ID` | `AKIA...` | IAM User Access Key with S3 permissions |
 | `AWS_SECRET_ACCESS_KEY` | `wJalrX...` | IAM User Secret Access Key |
 | `S3_BUCKET_NAME` | `western-nlp-logs-archive` | Target S3 Bucket name |
+| `DEMO_KEY` | `demo` | **Required.** API Key injected as SERVER_API_KEY |
 
 ## 3. Automatic Updates
 No manual action is required for updates.
@@ -266,6 +268,27 @@ No manual action is required for updates.
 Push changes to `main`.
 
 GitHub Actions will SSH into the server, pull the latest code, rebuild containers, and cleanup unused images.
+
+## 🔐 Authentication
+
+To prevent unauthorized usage, the API implements **API Key Authentication**.
+All inference and history endpoints (`/sentiment`, `/translate`, `/history`) require the `X-API-Key` header. Public endpoints (`/`, `/health`) remain open.
+
+### 🔑 Live Demo Access
+For recruitment and testing purposes, a **public demo key** is available:
+
+> **Header Name:** `X-API-Key`
+>
+> **Demo Value:** `demo`
+
+*(Please use this key responsibly. It is rate-limited and monitored.)*
+
+**Example cURL Request:**
+```bash
+curl -X POST "[https://western-nlp.ddns.net/sentiment](https://western-nlp.ddns.net/sentiment)" \
+     -H "X-API-Key: demo" \
+     -H "Content-Type: application/json" \
+     -d '{"text": "Security implementation is crucial for MLOps."}'
 
 ## API Documentation
 
