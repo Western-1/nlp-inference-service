@@ -2,7 +2,7 @@ import os
 import json
 import asyncio
 from datetime import datetime
-from typing import Any
+from typing import Any, Optional
 
 import redis
 import wandb
@@ -42,17 +42,18 @@ def get_redis() -> redis.Redis:
     """Factory to get redis client. Tests should patch this."""
     return redis.Redis(host=REDIS_HOST, port=REDIS_PORT, decode_responses=True)
 
-async def get_model(task_name: str, model_name: str):
+async def get_model(task_name: str, model_name: str, revision: Optional[str] = None):
     """
     Loads the model only when needed for the first time (Lazy Loading).
     Kept async-friendly by running pipeline in executor.
+    Supports Model Versioning via 'revision' (SHA hash).
     """
     if task_name not in _models:
-        print(f"Loading model for {task_name}...")
+        print(f"Loading model for {task_name} (Revision: {revision or 'latest'})...")
         loop = asyncio.get_running_loop()
         _models[task_name] = await loop.run_in_executor(
             None, 
-            lambda: pipeline(task_name, model=model_name)
+            lambda: pipeline(task_name, model=model_name, revision=revision)
         )
         print(f"Model {task_name} loaded!")
     return _models[task_name]
@@ -130,7 +131,11 @@ def get_history():
 
 @app.post("/sentiment", dependencies=[Security(get_api_key)])
 async def predict_sentiment(data: APIInput):
-    model = await get_model("sentiment-analysis", "distilbert-base-uncased-finetuned-sst-2-english")
+    model = await get_model(
+        "sentiment-analysis", 
+        "distilbert-base-uncased-finetuned-sst-2-english",
+        revision="714eb0f" 
+    )
     result = model(data.text)
     
     label = result[0]['label']
@@ -153,7 +158,11 @@ async def predict_sentiment(data: APIInput):
 
 @app.post("/translate", dependencies=[Security(get_api_key)])
 async def translate_text(data: APIInput):
-    model = await get_model("translation_en_to_fr", "Helsinki-NLP/opus-mt-en-fr")
+    model = await get_model(
+        "translation_en_to_fr", 
+        "Helsinki-NLP/opus-mt-en-fr",
+        revision="dd7f654"
+    )
     result = model(data.text)
     translated_text = result[0].get('translation_text') or result[0].get('translation', '')
     save_log("TRANSLATION", data.text, translated_text)

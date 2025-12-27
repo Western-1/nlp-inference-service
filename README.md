@@ -401,6 +401,16 @@ The test revealed the hardware limits of the single-core instance.
 
 ![Load Statistics](Images/locust_stats.png)
 
+## Model Versioning & Reproducibility
+
+To ensure **deterministic behavior** in production and avoid "silent failures," the system **does not** pull the `latest` version of models from HuggingFace. 
+
+Instead, we enforce strict version control by pinning specific **Git SHA Hashes** in the inference pipeline. This guarantees that the model running in production today is mathematically identical to the one tested during development.
+
+**Pinned Revisions:**
+- **Sentiment Model:** `distilbert-base-uncased...` @ `714eb0f` (Dec 2023 Stable)
+- **Translation Model:** `Helsinki-NLP/opus-mt-en-fr` @ `dd7f654` (Feb 2024 Stable)
+
 ## MLOps: Experiment Tracking
 
 The project is fully integrated with **Weights & Biases (W&B)** to track model performance in production. Unlike standard system monitoring (Prometheus), W&B focuses on the **quality of the ML model**.
