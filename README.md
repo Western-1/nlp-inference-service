@@ -337,11 +337,12 @@ curl -X POST "[https://western-nlp.ddns.net/sentiment](https://western-nlp.ddns.
 Try the API live here (Reverse Proxy via Nginx):  
 **[https://western-nlp.ddns.net/docs](https://western-nlp.ddns.net/docs)**
 
-> [!IMPORTANT]
-> Active (Hosted on AWS EC2 Free Tier)
-
-> [!NOTE]
-> Since this is a free tier instance, it might be stopped to save resources. If the link is down, please **contact me**, and I will restart it immediately.
+> [!WARNING]
+> **Status: Temporarily Paused** ⏸️
+>
+> To optimize **AWS Free Tier** resources for my next MLOps project, this EC2 instance is currently **stopped**. 
+>
+> If you would like to test the live API, please **message me on [LinkedIn](https://www.linkedin.com/in/андрій-влонга-9562b537b)**, and I will restart the server immediately (it takes ~1 minute).
 
 ![Docker Compose server](Images/architecture_live.png)
 
